@@ -30,6 +30,18 @@ export interface ToolContext {
   progress: Progress;
 }
 
+/** Behaviour hints a client reads to decide whether a call needs confirming:
+ *  a read may be auto-approved, a write is confirmed. flowkit's writes are all
+ *  reversible (validated, and undone by `undo`), so none are marked destructive.
+ *  See modelcontextprotocol.io on tool annotations. */
+export interface ToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 export interface ToolSpec {
   name: string;
   config: {
@@ -39,7 +51,21 @@ export interface ToolSpec {
   };
   /** Set on tools that change the document, so the listing cache is refreshed. */
   writes?: boolean;
+  /** For tools registered WITHOUT the write machinery (the project tools): true
+   *  marks one that only reads, so it can be annotated read-only. */
+  readOnly?: boolean;
   run: (args: never, ctx: ToolContext) => unknown;
+}
+
+/** A tool's annotations: a reader is read-only; a writer is a non-destructive
+ *  write (reversible via undo). `isRead` is decided by the caller, because the
+ *  two registration paths classify differently — through `register` a tool is a
+ *  reader unless it `writes`, while a bare project tool is a writer unless it
+ *  explicitly says `readOnly`. */
+function annotate(spec: ToolSpec, isRead: boolean): ToolAnnotations {
+  return isRead
+    ? { title: spec.config.title, readOnlyHint: true }
+    : { title: spec.config.title, readOnlyHint: false, destructiveHint: false };
 }
 
 /** The slice of the MCP handler's second argument we use. */
@@ -51,7 +77,7 @@ export interface HandlerExtra {
 export interface Registrar {
   registerTool(
     name: string,
-    config: ToolSpec['config'],
+    config: ToolSpec['config'] & { annotations?: ToolAnnotations },
     handler: (args: never, extra: HandlerExtra) => unknown,
   ): unknown;
   /** Tell the client the resource list may have changed, so the `@` menu
@@ -104,6 +130,9 @@ export function register(server: Registrar, ws: Workspace, specs: readonly ToolS
           .optional()
           .describe('Project id. Defaults to the one open_project selected.'),
       },
+      // Read unless it writes — so a client can auto-approve reads and confirm
+      // only writes (which are non-destructive: undo reverses them).
+      annotations: annotate(spec, !spec.writes),
     };
 
     server.registerTool(spec.name, config, (async (
@@ -152,7 +181,10 @@ async function rebuildTailwind(store: Store): Promise<void> {
  *  first place, so they register without the injected argument. */
 export function registerBare(server: Registrar, specs: readonly ToolSpec[]): void {
   for (const spec of specs) {
-    server.registerTool(spec.name, spec.config, (async (args: never, extra: HandlerExtra) => {
+    // A project tool is a writer unless it says readOnly (list_projects,
+    // open_project, open_canvas do not touch the document).
+    const config = { ...spec.config, annotations: annotate(spec, spec.readOnly === true) };
+    server.registerTool(spec.name, config, (async (args: never, extra: HandlerExtra) => {
       const reply = await spec.run(args, { progress: reporter(extra) } as unknown as ToolContext);
       // These are the project tools: opening, creating or moving a project
       // changes which screens `@` should list. A read like list_projects fires

@@ -9,11 +9,15 @@
  * `flowkit init --client X` writes the file for the client named; `flowkit
  * config X` only prints it, for someone who would rather paste it themselves.
  *
- * The invocation is a global install by default — `command: "flowkit"` — with a
- * `--npx` variant that runs `bunx @combycode/flowkit` for people who would rather not
- * install anything.
+ * The invocation points at the installed flowkit by ABSOLUTE PATH by default,
+ * because a GUI client (Claude Desktop, Cursor, Windsurf) is launched from the
+ * desktop, not a shell, and its PATH does not include ~/.bun/bin — so a bare
+ * `flowkit` that works in a terminal fails silently there. `--npx` instead runs
+ * `bunx @combycode/flowkit`, for people who would rather not install anything.
+ * Set FLOWKIT_BIN to override the resolved path.
  */
 
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -101,11 +105,35 @@ interface Opts {
 const homeOf = (o: Opts): string => o.home ?? homedir();
 const designsOf = (o: Opts): string => resolve(o.designs ?? join(o.dir, 'design'));
 
+/** The absolute path to the installed `flowkit` launcher, so a GUI client with
+ *  a bare desktop PATH can still find it. Resolution, most specific first:
+ *    1. FLOWKIT_BIN, an explicit override;
+ *    2. whatever `flowkit` resolves to on the PATH that ran this command — the
+ *       terminal's PATH, which does include ~/.bun/bin (on Windows a GUI needs
+ *       the .exe launcher, not the bash shim bun also drops beside it);
+ *    3. a bare `flowkit`, when nothing is found — no worse than before, for the
+ *       rare setup where the tool is not yet on any PATH.
+ */
+function flowkitBin(): string {
+  const override = process.env.FLOWKIT_BIN;
+  if (override) return override;
+
+  const found = Bun.which('flowkit');
+  if (found) {
+    if (platform() === 'win32' && !found.toLowerCase().endsWith('.exe')) {
+      const exe = `${found}.exe`;
+      if (existsSync(exe)) return exe;
+    }
+    return found;
+  }
+  return 'flowkit';
+}
+
 /** The command + args a config invokes flowkit with. */
 function invocation(designs: string, npx: boolean): { command: string; args: string[] } {
   return npx
     ? { command: 'bunx', args: ['@combycode/flowkit', '--workspace', designs] }
-    : { command: 'flowkit', args: ['--workspace', designs] };
+    : { command: flowkitBin(), args: ['--workspace', designs] };
 }
 
 /** The `[mcp_servers.flowkit]` table on its own. */

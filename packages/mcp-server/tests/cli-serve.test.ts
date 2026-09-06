@@ -46,3 +46,54 @@ describe('flowkit mcp (the CLI as a server)', () => {
     expect(r.content.map((c) => c.text ?? '').join('')).toBeTruthy();
   });
 });
+
+/* The other half: with the canvas up, the server must DIE when its stdin closes
+ * (a GUI client that just closes the pipe). Otherwise the process — and its
+ * port — outlive the client forever. */
+describe('flowkit (server + canvas) exits when its client disconnects', () => {
+  test('closing stdin stops the process', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'fk-exit-'));
+    const port = 5361; // off the default, so a real canvas on 5190 is untouched
+    const proc = Bun.spawn(
+      [
+        'bun',
+        join(import.meta.dir, '..', 'src', 'cli.ts'),
+        '--workspace',
+        home,
+        '--port',
+        String(port),
+      ],
+      {
+        stdin: 'pipe',
+        stdout: 'ignore',
+        stderr: 'ignore',
+        env: { ...process.env, FLOWKIT_HOME: home, APPDATA: home, XDG_DATA_HOME: home },
+      },
+    );
+    try {
+      // Wait for the canvas to be listening — that is the thing that would keep
+      // the process alive.
+      let up = false;
+      for (let i = 0; i < 40 && !up; i++) {
+        up = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(300) })
+          .then((r) => r.ok)
+          .catch(() => false);
+        if (!up) await new Promise((r) => setTimeout(r, 150));
+      }
+      expect(up).toBe(true);
+
+      // The client goes away: close the pipe.
+      proc.stdin.end();
+
+      // It must exit on its own, promptly.
+      const exited = await Promise.race([
+        proc.exited,
+        new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), 8000)),
+      ]);
+      expect(exited).not.toBe('timeout');
+    } finally {
+      proc.kill();
+      await rm(home, { recursive: true, force: true });
+    }
+  }, 25000);
+});

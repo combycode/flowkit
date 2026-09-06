@@ -27,7 +27,15 @@
 
 import type { ProjectDoc } from '@flowkit/core';
 import type { Selection, Sidecar } from '@flowkit/host';
-import { mapPage, peekSelections, READY_FLAG, takeSelections, type Workspace } from '@flowkit/host';
+import {
+  mapPage,
+  peekAllSelections,
+  peekSelections,
+  READY_FLAG,
+  takeAllSelections,
+  takeSelections,
+  type Workspace,
+} from '@flowkit/host';
 import { z } from 'zod';
 import { type ToolReply, text } from '../reply';
 import { type Registrar, registerBare, type ToolSpec } from './registrar';
@@ -50,40 +58,81 @@ function tools(ws: Workspace, sidecar: Sidecar): ToolSpec[] {
       config: {
         title: 'What the user pointed at',
         description:
-          'Alt-dragging a rectangle on the canvas records a selection. This returns every ' +
-          'one that is waiting, oldest first: a picture of each region, the screens it ' +
-          'covers, and the elements under it with their classes, string keys and text. ' +
+          'Alt-dragging a rectangle on the canvas records a selection. With no project, this ' +
+          'returns every one waiting across ALL open canvases, oldest first (name a project to ' +
+          'read only its own): a picture of each region, the screens it covers, and the ' +
+          'elements under it with their classes, string keys and text. ' +
           'CALL IT WHENEVER A QUESTION USES A WORD LIKE "this", "here", "these" or "that" ' +
           'without saying which screen — those are gestures, and this is where they are. ' +
-          'Several waiting usually means ONE question about all of them. ' +
-          'Reading consumes them, so call it once per question.',
+          'Several waiting usually means ONE question about all of them (which may span two ' +
+          'projects, to compare them). ' +
+          'Reading consumes them, so call it once per question. A selection older than ten ' +
+          'minutes is dropped unread.',
         inputSchema: { project: z.string().optional(), peek: z.boolean().optional() },
       },
       run: async (args: { project?: string; peek?: boolean }): Promise<ToolReply> => {
-        const { id, store } = await ws.require(args.project);
+        // A named project reads that project's queue; without one, the question
+        // is about whatever the person just pointed at, wherever that was — so
+        // sweep every project (a gesture in each of two, to ask the model to
+        // compare them, is ordinary). Reading consumes unless `peek`.
+        const id = args.project ? (await ws.require(args.project)).id : undefined;
+        const waiting = id
+          ? args.peek
+            ? await peekSelections(id)
+            : await takeSelections(id)
+          : args.peek
+            ? await peekAllSelections()
+            : await takeAllSelections();
 
-        const waiting = args.peek ? await peekSelections(id) : await takeSelections(id);
         if (waiting.length === 0) {
           return text(
-            `Nothing selected in ${id}. Alt-drag a rectangle on the canvas to point at ` +
-              'something, then ask again.',
+            id
+              ? `Nothing selected in ${id}. Alt-drag a rectangle on the canvas to point at ` +
+                  'something, then ask again.'
+              : 'Nothing selected on any canvas. Alt-drag a rectangle to point at something, ' +
+                  'then ask again. (A selection older than ten minutes is dropped.)',
           );
         }
 
-        const doc = store.get();
+        // Each selection is rendered from ITS OWN project's document, because a
+        // no-project sweep can carry selections from several. Resolved once per
+        // project.
+        const docs = new Map<string, ProjectDoc | null>();
+        const docFor = async (project: string): Promise<ProjectDoc | null> => {
+          if (!docs.has(project)) {
+            try {
+              docs.set(project, (await ws.require(project)).store.get());
+            } catch {
+              docs.set(project, null);
+            }
+          }
+          return docs.get(project) ?? null;
+        };
+
+        const projects = new Set(waiting.map((s) => s.project));
         const content: ToolReply['content'] = [];
 
         if (waiting.length > 1) {
           content.push({
             type: 'text',
             text:
-              `${waiting.length} selections were waiting, oldest first. Unless the person ` +
-              'said otherwise, treat them as one question about all of them.',
+              `${waiting.length} selections were waiting, oldest first` +
+              `${projects.size > 1 ? ` across ${projects.size} projects` : ''}. Unless the ` +
+              'person said otherwise, treat them as one question about all of them.',
           });
         }
 
         for (const [index, selection] of waiting.entries()) {
           const label = waiting.length > 1 ? `Selection ${index + 1} of ${waiting.length}. ` : '';
+          const doc = await docFor(selection.project);
+          if (!doc) {
+            content.push({
+              type: 'text',
+              text: `${label}Selected in ${selection.project}, which is no longer available.`,
+            });
+            continue;
+          }
+
           const shot = index < PICTURES ? await render(sidecar, doc, selection) : undefined;
 
           if (typeof shot === 'string') {
@@ -93,7 +142,8 @@ function tools(ws: Workspace, sidecar: Sidecar): ToolSpec[] {
 
           content.push({
             type: 'text',
-            text: label + describe(selection, id, shot?.width ?? 0, shot?.height ?? 0),
+            text:
+              label + describe(selection, selection.project, shot?.width ?? 0, shot?.height ?? 0),
           });
           if (shot) content.push({ type: 'image', data: shot.data, mimeType: 'image/png' });
         }

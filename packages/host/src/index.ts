@@ -48,8 +48,10 @@ export type { SelectedElement, Selection } from './selection';
 export {
   clearSelection,
   countSelections,
+  peekAllSelections,
   peekSelections,
   saveSelection,
+  takeAllSelections,
   takeSelections,
 } from './selection';
 export type { ServeOptions, Studio } from './server/studio';

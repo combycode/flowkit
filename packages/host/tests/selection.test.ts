@@ -15,8 +15,10 @@ import type { Selection } from '../src/selection';
 import {
   clearSelection,
   countSelections,
+  peekAllSelections,
   peekSelections,
   saveSelection,
+  takeAllSelections,
   takeSelections,
 } from '../src/selection';
 
@@ -41,9 +43,14 @@ afterEach(async () => {
   await rm(home, { recursive: true, force: true });
 });
 
-const selection = (project = 'p', x = 100): Selection => ({
+// A gesture expires ten minutes after it is made, so the fixture must be fresh
+// or every read would prune it. Computed once, so two calls compare equal.
+const NOW = new Date().toISOString();
+const AGES_AGO = new Date(Date.now() - 20 * 60_000).toISOString();
+
+const selection = (project = 'p', x = 100, at = NOW): Selection => ({
   project,
-  at: '2026-09-01T12:00:00.000Z',
+  at,
   region: { x, y: 200, width: 300, height: 400 },
   nodes: ['n1'],
   elements: [
@@ -165,5 +172,72 @@ describe('several, waiting together', () => {
     await writeFile(join(dir, 'legacy.json'), JSON.stringify(selection('legacy')), 'utf8');
 
     expect(await peekSelections('legacy')).toHaveLength(1);
+  });
+});
+
+/* A gesture is a live question, and ten minutes later the person has moved on.
+   A stale one answered about a rectangle nobody is looking at any more is worse
+   than nothing — and a header that counts it is lying. */
+describe('a gesture expires', () => {
+  test('an old one is not returned, and the count forgets it', async () => {
+    await saveSelection(selection('p', 1, AGES_AGO));
+
+    expect(await peekSelections('p')).toEqual([]);
+    expect(await countSelections('p')).toBe(0);
+    expect(await takeSelections('p')).toEqual([]);
+  });
+
+  test('the fresh survive a purge of the stale in the same queue', async () => {
+    await saveSelection(selection('p', 1, AGES_AGO));
+    await saveSelection(selection('p', 2)); // fresh
+
+    const live = await peekSelections('p');
+    expect(live).toHaveLength(1);
+    expect(live[0]?.region.x).toBe(2);
+  });
+
+  test('reading a queue prunes the expired file from disk', async () => {
+    await saveSelection(selection('p', 1, AGES_AGO));
+    // The prune happens on read; nothing survives, so the file is gone.
+    await peekSelections('p');
+    expect(await countSelections('p')).toBe(0);
+  });
+});
+
+/* A question with no named project is about whatever the person just pointed
+   at, wherever that was — including a gesture in each of two projects, to ask
+   the model to compare them. */
+describe('across all projects', () => {
+  test('peek gathers every waiting gesture, oldest first', async () => {
+    await saveSelection(selection('one', 1));
+    await saveSelection(selection('two', 2));
+
+    const all = await peekAllSelections();
+    expect(all).toHaveLength(2);
+    expect(all.map((s) => s.project).sort()).toEqual(['one', 'two']);
+  });
+
+  test('taking empties every project at once', async () => {
+    await saveSelection(selection('one', 1));
+    await saveSelection(selection('two', 2));
+
+    expect(await takeAllSelections()).toHaveLength(2);
+    expect(await peekAllSelections()).toEqual([]);
+    expect(await countSelections('one')).toBe(0);
+    expect(await countSelections('two')).toBe(0);
+  });
+
+  test('the sweep skips the expired', async () => {
+    await saveSelection(selection('one', 1, AGES_AGO));
+    await saveSelection(selection('two', 2)); // fresh
+
+    const all = await takeAllSelections();
+    expect(all).toHaveLength(1);
+    expect(all[0]?.project).toBe('two');
+  });
+
+  test('nothing anywhere is not an error', async () => {
+    expect(await peekAllSelections()).toEqual([]);
+    expect(await takeAllSelections()).toEqual([]);
   });
 });

@@ -111,7 +111,7 @@ async function main() {
 
   const server = new McpServer(
     // Keep in step with packages/mcp-server/package.json — the published version.
-    { name: 'flowkit', version: '0.1.1' },
+    { name: 'flowkit', version: '0.1.2' },
     { instructions: INSTRUCTIONS },
   );
   const registrar = server as unknown as Registrar;
@@ -157,13 +157,23 @@ async function main() {
     console.error(`Studio not started: ${e instanceof Error ? e.message : String(e)}`);
   }
 
+  let stopping = false;
   const shutdown = () => {
+    if (stopping) return;
+    stopping = true;
     studio?.stop();
     sidecar.stop();
     process.exit(0);
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+
+  // The client is gone the instant our stdin closes. A GUI client (Claude
+  // Desktop) closes the pipe rather than signalling us — and because the canvas
+  // is a live Bun.serve, the process (and its port) would otherwise outlive the
+  // client forever. Exit when the pipe ends.
+  process.stdin.on('end', shutdown);
+  process.stdin.on('close', shutdown);
 
   await server.connect(new StdioServerTransport());
 }

@@ -100,6 +100,19 @@ describe('MCP server over stdio', () => {
     expect(names.some((n) => /file|path|write_json|raw/.test(n))).toBe(false);
   });
 
+  /* Annotations let a client auto-approve reads and confirm only writes — and
+   * flowkit's writes are never destructive, because undo reverses them. */
+  test('tools carry read-only / non-destructive annotations', async () => {
+    const { tools } = await client.listTools();
+    const ann = new Map(tools.map((t) => [t.name, t.annotations]));
+
+    expect(ann.get('overview')?.readOnlyHint).toBe(true); // a reader
+    expect(ann.get('list_projects')?.readOnlyHint).toBe(true); // a bare reader
+    expect(ann.get('set_item_html')?.readOnlyHint).toBe(false); // a writer
+    expect(ann.get('set_item_html')?.destructiveHint).toBe(false); // …but reversible
+    expect(ann.get('create_project')?.readOnlyHint).toBe(false); // a bare writer
+  });
+
   test('overview reports the project', async () => {
     const { text } = await say('overview');
     expect(text).toContain('Smoke');

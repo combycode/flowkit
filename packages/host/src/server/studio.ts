@@ -196,7 +196,7 @@ const shell = (): string => `<!doctype html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Design Flow</title>
+<title>Flowkit</title>
 <link rel="stylesheet" href="/viewer.css">
 </head>
 <body>

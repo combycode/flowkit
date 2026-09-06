@@ -52,6 +52,14 @@ export function App() {
     }
   }, [ground]);
 
+  /* The tab is named after the project, not the tool — several designs open in
+   * several tabs are told apart by their titles, and "Design Flow" on all of
+   * them is no help. The static shell ships a neutral title for the moment
+   * before the document arrives; this replaces it once we know the name. */
+  useEffect(() => {
+    if (state.status === 'ready') document.title = `${state.doc.name} — Flowkit`;
+  }, [state]);
+
   // The document names its own defaults, so the first context comes from it
   // rather than from constants that could drift out of step with the kit.
   const effectiveCtx = useMemo<RenderContext | null>(() => {

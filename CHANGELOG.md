@@ -6,6 +6,40 @@ aims at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] — tool annotations, canvas and selection fixes, GUI-ready configs
+
+### Added
+
+- Every tool now carries MCP annotations — `readOnlyHint` on the readers,
+  `readOnlyHint: false` with `destructiveHint: false` on the writers (flowkit's
+  writes are reversible: validated, and undone by `undo`). Clients that honour
+  annotations can auto-approve reads and confirm only writes, instead of asking
+  on every call.
+- `get_selection` with no `project` now returns every waiting gesture across
+  ALL open canvases, oldest first — so a question about "this", asked while
+  looking at a canvas that was opened by URL (and never selected as the active
+  project), reaches it, and two gestures in two projects can be compared in one
+  question.
+
+### Fixed
+
+- `flowkit --workspace <dir>` (and any invocation whose first argument is a
+  flag) started the server instead of failing with "Unknown command" — this is
+  exactly the form an MCP client's config passes, so a config without an
+  explicit verb now works.
+- The server (with its canvas) now exits when its client disconnects — a GUI
+  client closes the stdio pipe rather than signalling, and the canvas would
+  otherwise keep the process, and its port, alive after the client had gone.
+- The canvas tab is now titled after the project, not a fixed "Design Flow", so
+  several designs open at once are told apart.
+- A selection now expires ten minutes after it is made — pruned on every read
+  and count — so a stale gesture no longer haunts a later, unrelated question
+  and the header badge never counts one that no longer means anything.
+- `flowkit init`/`config` now write the ABSOLUTE path to the installed flowkit,
+  because a GUI client (Claude Desktop, Cursor, Windsurf) is launched from the
+  desktop and its PATH does not include `~/.bun/bin` — a bare `flowkit` command
+  worked in a terminal but failed silently there. Set `FLOWKIT_BIN` to override.
+
 ## [0.1.1] — install fixes
 
 ### Fixed
@@ -54,6 +88,7 @@ design exports to a single self-contained HTML file.
 - **Text and translation.** Every visible string carries a key; generated kit
   pages are never offered for translation.
 
-[Unreleased]: https://github.com/combycode/flowkit/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/combycode/flowkit/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/combycode/flowkit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/combycode/flowkit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/combycode/flowkit/releases/tag/v0.1.0

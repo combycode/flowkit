@@ -39,6 +39,7 @@ function tools(ws: Workspace, canvas: Canvas): ToolSpec[] {
   return [
     {
       name: 'list_projects',
+      readOnly: true,
       config: {
         title: 'List projects',
         description:
@@ -70,6 +71,7 @@ function tools(ws: Workspace, canvas: Canvas): ToolSpec[] {
 
     {
       name: 'open_project',
+      readOnly: true,
       config: {
         title: 'Select a project',
         description:
@@ -201,6 +203,7 @@ function tools(ws: Workspace, canvas: Canvas): ToolSpec[] {
 
     {
       name: 'open_canvas',
+      readOnly: true,
       config: {
         title: 'Open the canvas in a browser',
         description:

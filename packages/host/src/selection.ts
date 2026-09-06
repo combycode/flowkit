@@ -24,7 +24,7 @@
  * third while silently ignoring the other two.
  */
 
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exists } from './fsx';
 import { appDataDir } from './paths';
@@ -70,6 +70,45 @@ const safe = (id: string): string => id.replace(/[^\w.-]/g, '_');
  *  first, and an unbounded queue is a file that grows for ever. */
 const MAX = 20;
 
+/** How long a gesture is worth acting on. A selection is a live "why is THIS
+ *  cramped?", and ten minutes later the person has moved on: answering about a
+ *  rectangle from earlier is worse than answering about nothing. Expired ones
+ *  are pruned on every read, so a stale gesture never haunts a later question
+ *  and the header count never shows one that no longer means anything. */
+const TTL_MS = 10 * 60_000;
+
+const fresh = (s: Selection): boolean => Date.now() - Date.parse(s.at) < TTL_MS;
+
+/** Read one project's file, dropping expired entries and persisting the prune
+ *  so the count the canvas polls and the queue a tool takes agree. Returns the
+ *  survivors, oldest first. */
+async function liveQueue(path: string): Promise<Selection[]> {
+  if (!(await exists(path))) return [];
+  let all: Selection[];
+  try {
+    const parsed = JSON.parse(await readFile(path, 'utf8')) as Selection | Selection[];
+    // A file written before this was a queue holds one object.
+    all = Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    // A half-written or hand-edited file is not worth an error: the person can
+    // simply select again.
+    return [];
+  }
+  const live = all.filter(fresh);
+  if (live.length !== all.length) {
+    if (live.length === 0) await rm(path, { force: true });
+    else await writeFile(path, JSON.stringify(live, null, 2), 'utf8');
+  }
+  return live;
+}
+
+/** Every selection file currently on disk. */
+async function queueFiles(): Promise<string[]> {
+  const d = dir();
+  if (!(await exists(d))) return [];
+  return (await readdir(d)).filter((f) => f.endsWith('.json')).map((f) => join(d, f));
+}
+
 /** Add one to the queue. Returns how many are now waiting.
  *
  *  A QUEUE, not a slot. Pointing at three things and then asking one question
@@ -83,31 +122,45 @@ export async function saveSelection(selection: Selection): Promise<number> {
   return queue.length;
 }
 
-/** Everything waiting, oldest first, without consuming any of it. */
+/** Everything waiting for one project, oldest first, without consuming any of
+ *  it. Expired entries are pruned as a side effect. */
 export async function peekSelections(project: string): Promise<Selection[]> {
-  const path = fileOf(project);
-  if (!(await exists(path))) return [];
-  try {
-    const parsed = JSON.parse(await readFile(path, 'utf8')) as Selection | Selection[];
-    // A file written before this was a queue holds one object.
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    // A half-written or hand-edited file is not worth an error: the person can
-    // simply select again.
-    return [];
-  }
+  return liveQueue(fileOf(project));
 }
 
-/** How many are waiting. What the canvas shows in its header. */
+/** How many are waiting for one project. What the canvas shows in its header. */
 export async function countSelections(project: string): Promise<number> {
   return (await peekSelections(project)).length;
 }
 
-/** Read them all and clear the queue. */
+/** Read one project's queue and clear it. */
 export async function takeSelections(project: string): Promise<Selection[]> {
   const found = await peekSelections(project);
   if (found.length > 0) await clearSelection(project);
   return found;
+}
+
+/** Everything waiting across ALL projects, oldest first, without consuming any
+ *  of it. A question with no named project is about whatever the person just
+ *  pointed at, wherever that was — including a gesture in each of two projects
+ *  to ask the model to compare them. */
+export async function peekAllSelections(): Promise<Selection[]> {
+  const out: Selection[] = [];
+  for (const path of await queueFiles()) out.push(...(await liveQueue(path)));
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/** Read every project's queue and clear them all. */
+export async function takeAllSelections(): Promise<Selection[]> {
+  const out: Selection[] = [];
+  for (const path of await queueFiles()) {
+    const live = await liveQueue(path);
+    if (live.length > 0) {
+      out.push(...live);
+      await rm(path, { force: true });
+    }
+  }
+  return out.sort((a, b) => a.at.localeCompare(b.at));
 }
 
 export async function clearSelection(project: string): Promise<void> {

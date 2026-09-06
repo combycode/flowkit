@@ -84,14 +84,9 @@ async function version(): Promise<string> {
 async function run(): Promise<number> {
   switch (command) {
     case 'help':
-    case '--help':
-    case '-h':
+      // The flag forms (--help/-h/--version/-v) are handled in the dispatcher
+      // below, before flag-shaped args are treated as server flags.
       console.log(HELP);
-      return 0;
-
-    case '--version':
-    case '-v':
-      console.log(await version());
       return 0;
 
     case 'init':
@@ -315,10 +310,19 @@ async function exportProject(): Promise<number> {
   }
 }
 
+// A first argument starting with '-' is a FLAG, not a verb — so `flowkit
+// --workspace <dir>` (exactly what an MCP config passes) is the server with
+// flags, not an "unknown command". Only --version/--help are flag-shaped verbs.
+const isFlag = command !== undefined && command.startsWith('-');
+
 // The long-running server commands must NOT exit — the process stays alive on
-// the stdio transport (undefined / mcp) or the bound canvas port (serve).
-// Everything else is a one-shot: run it, print a clean error on failure, exit.
-if (command === undefined || command === 'mcp') {
+// the stdio transport (no verb / a leading flag / mcp) or the bound canvas port
+// (serve). Everything else is a one-shot: run it, print a clean error, exit.
+if (command === '--version' || command === '-v') {
+  console.log(await version());
+} else if (command === '--help' || command === '-h') {
+  console.log(HELP);
+} else if (command === undefined || isFlag || command === 'mcp') {
   if (command === 'mcp' && !process.argv.includes('--no-studio')) process.argv.push('--no-studio');
   await import('./main.ts');
 } else if (command === 'serve') {
