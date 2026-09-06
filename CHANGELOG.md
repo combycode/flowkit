@@ -6,7 +6,7 @@ aims at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.1.0-rc] — first release candidate
+## [0.1.0] — first release
 
 The design lives as one JSON document in your repo and is edited only through
 MCP tools; a browser canvas shows the real screens as live HTML, and the whole
@@ -41,5 +41,5 @@ design exports to a single self-contained HTML file.
 - **Text and translation.** Every visible string carries a key; generated kit
   pages are never offered for translation.
 
-[Unreleased]: https://github.com/combycode/flowkit/compare/v0.1.0-rc...HEAD
-[0.1.0-rc]: https://github.com/combycode/flowkit/releases/tag/v0.1.0-rc
+[Unreleased]: https://github.com/combycode/flowkit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/combycode/flowkit/releases/tag/v0.1.0
