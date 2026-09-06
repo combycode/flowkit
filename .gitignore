@@ -1,0 +1,37 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+
+# spike artefacts — the code is tracked, the output is not
+spikes/*/out/
+spikes/*/node_modules/
+
+# tauri build output (later)
+target/
+dist/
+
+.verify-out/
+.verify-profile/
+dist-viewer/
+
+# my own working files, never the project's
+.scratch/
+
+# private research notes — kept locally, never committed
+NOTES-*.md
+packages/*/dist/
+
+# generated demo exports (regenerate with flowkit export_*)
+examples/cadence/exports/
+
+# generated per-project listing cache (holds an absolute path; regenerated on open)
+*.meta.json
+
+# early architecture spikes — kept on disk, not shipped
+spikes/
+
+# local, machine-pinned QA experiments (hardcode a chrome path); kept on disk
+tools/baseline-floor.ts
+tools/verify-fidelity.ts
+tools/verify-import.ts

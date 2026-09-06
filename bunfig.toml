@@ -1,0 +1,16 @@
+[install]
+# Supply-chain cooldown. Compromised npm releases are typically caught within
+# hours to days, so refusing anything published in the last 14 days removes
+# most of the exposure window at the cost of running slightly older tools.
+# Verified: with this set, bun resolves @biomejs/biome to 2.5.8 rather than the
+# 4-day-old 2.5.11.
+#
+# It buys odds, not safety — see the notes in README on what this does NOT
+# catch (a tool we execute, like biome or tsc, is dangerous regardless of
+# install hooks).
+minimumReleaseAge = 1209600
+
+# Bun does not run dependency lifecycle scripts by default, which is the main
+# npm-worm execution vector. Do not add `trustedDependencies` and do not use
+# `bun add --trust` without reading the script first.
+exact = true

@@ -1,0 +1,28 @@
+{
+  "name": "@combycode/flowkit",
+  "version": "0.1.0-rc",
+  "description": "A design system and screen flow an agent can work on. One JSON document, edited only through tools.",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "bin": {
+    "flowkit": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "design-system",
+    "ui",
+    "prototyping",
+    "claude-code"
+  ],
+  "dependencies": {
+    "@flowkit/core": "workspace:*",
+    "@flowkit/host": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.4.3"
+  }
+}

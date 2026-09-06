@@ -1,0 +1,32 @@
+{
+  "name": "flowkit-workspace",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc -p packages/core/tsconfig.json && tsc -p packages/core/tsconfig.test.json && tsc -p packages/host/tsconfig.json && tsc -p packages/mcp-server/tsconfig.json && tsc -p apps/studio/tsconfig.json",
+    "import": "bun run tools/import-straiw.ts",
+    "mcp": "bun run packages/mcp-server/src/main.ts",
+    "mcp:call": "bun run tools/mcp-call.ts",
+    "dev": "bun run build:viewer && bun run packages/host/src/server/main.ts",
+    "test": "bun test packages apps",
+    "audit": "bun run tools/audit.ts",
+    "check": "bun run audit && bun run lint && bun run typecheck && bun run test",
+    "build": "bun run tools/build-package.ts",
+    "build:viewer": "cd apps/studio && bunx vite build --config vite.viewer.config.ts",
+    "serve": "bun run packages/host/src/server/main.ts",
+    "dev:hmr": "cd apps/studio && bunx vite"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.9",
+    "@flowkit/host": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@types/bun": "1.3.14",
+    "typescript": "7.0.2",
+    "zod": "4.4.3"
+  }
+}

@@ -1,0 +1,357 @@
+:root {
+  --ui-bg: #0b0c10;
+  --ui-panel: #14161d;
+  --ui-line: #262a35;
+  --ui-text: #e7e9f0;
+  --ui-muted: #9aa2b5;
+  --ui-accent: #4a7cf7;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font:
+    13px / 1.5 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.app__canvas {
+  flex: 1;
+  min-height: 0;
+  background: var(--ui-bg);
+}
+
+/* The board, not the design. A dark design on a dark board has nothing
+   between the screens and the space around them — the frames, and the lines
+   running between them, only read once the ground behind them changes.
+   Muted rather than white: this is looked at for hours. */
+.app__canvas[data-ground="light"] {
+  background: #c9ccd4;
+}
+.app__canvas[data-ground="light"] .react-flow__edge-path {
+  stroke: #4a5164;
+}
+.app__canvas[data-ground="light"] .react-flow__edge.edge--assumed .react-flow__edge-path {
+  stroke: #6d7488;
+}
+.app__canvas[data-ground="light"] .react-flow__edge-textbg {
+  fill: #c9ccd4;
+}
+.app__canvas[data-ground="light"] .react-flow__edge-text {
+  fill: #2b3040;
+}
+.app__canvas[data-ground="light"] .screen-node__title,
+.app__canvas[data-ground="light"] .screen-node__desc {
+  color: #2b3040;
+}
+
+.splash {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--ui-muted);
+}
+.splash small {
+  color: var(--ui-muted);
+  opacity: 0.8;
+}
+
+/* toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 14px;
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
+  flex-wrap: wrap;
+}
+.toolbar__name {
+  font-size: 14px;
+}
+.toolbar__count {
+  margin-left: auto;
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Gestures the agent has not read yet.
+ *
+ * Accented rather than muted: it is the one thing in this header that is
+ * WAITING for something, and it disappears by itself once the agent reads it.
+ * It takes the free space so that it sits against the screen count rather
+ * than adrift in the middle of the bar. */
+.toolbar__waiting {
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--ui-accent) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ui-accent) 14%, transparent);
+  color: var(--ui-text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}
+.toolbar__waiting + .toolbar__count {
+  margin-left: 10px;
+}
+
+.seg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.seg__label {
+  color: var(--ui-muted);
+}
+.seg__buttons {
+  display: flex;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.seg__buttons button {
+  background: transparent;
+  border: 0;
+  color: var(--ui-muted);
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.seg__buttons button + button {
+  border-left: 1px solid var(--ui-line);
+}
+.seg__buttons button:hover {
+  color: var(--ui-text);
+}
+.seg__buttons button[aria-pressed="true"] {
+  background: var(--ui-accent);
+  color: #fff;
+}
+
+/* node */
+.screen-node__title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.screen-node__desc {
+  color: var(--ui-muted);
+  margin-top: 6px;
+  max-width: 100%;
+}
+.screen-node__frame {
+  /* Matches the frames in design/index.html: hairline light border, raised
+     ground, deep shadow. Radius is per-device and set by the component —
+     26px for a phone, 10px for a desktop window. */
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  overflow: hidden;
+  background: #0f1117;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.screen-node__frame iframe {
+  border: 0;
+  display: block;
+  /* Plain wheel and drag belong to the canvas — taking them for the screen
+     would mean you could not zoom out with the pointer over any of sixty-two
+     screens. Ctrl/Alt + wheel scrolls inside instead, handled on the wrapper
+     (which still receives events) by useScreenScroll. */
+  pointer-events: none;
+}
+.react-flow__node {
+  color: var(--ui-text);
+}
+
+/* React Flow chrome — the minimap and the zoom buttons ship light by default,
+   which is a bright rectangle in the corner of a dark canvas. Theme both.
+   These override the library's own rules, so they must come after its
+   stylesheet import (which Canvas.tsx does at module load). */
+.react-flow__minimap {
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+}
+.react-flow__minimap-mask {
+  /* The part NOT in view: dim it rather than lighten it. */
+  fill: rgba(8, 9, 13, 0.72);
+  stroke: none;
+}
+.react-flow__minimap-node {
+  fill: #2b3040;
+  stroke: none;
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.react-flow__controls-button {
+  background: var(--ui-panel);
+  border: none;
+  border-bottom: 1px solid var(--ui-line);
+  color: var(--ui-text);
+  width: 26px;
+  height: 26px;
+}
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+.react-flow__controls-button:hover {
+  background: #1c2029;
+}
+/* The icons are inline SVG with a hardcoded dark fill, so they vanish on a
+   dark button unless recoloured explicitly. */
+.react-flow__controls-button svg {
+  fill: var(--ui-text);
+  max-width: 13px;
+  max-height: 13px;
+}
+
+/* Edges: the default near-black stroke is invisible on this ground.
+   `non-scaling-stroke` is what keeps them there when you zoom out — the SVG
+   is scaled by the viewport transform, so at 10% a 2px line is drawn a fifth
+   of a pixel wide and the whole graph fades to nothing at exactly the zoom
+   where you are looking at the shape of it. Non-scaling means the stroke is
+   2px on the SCREEN at any zoom. */
+.react-flow__edge-path {
+  stroke: #6b7488;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--ui-accent);
+}
+.react-flow__handle {
+  background: #3a4152;
+  border: 1px solid var(--ui-line);
+}
+.react-flow__attribution {
+  background: transparent;
+}
+.react-flow__attribution a {
+  color: var(--ui-muted);
+}
+
+/* An inferred connection, drawn provisionally — the importer guessed it from
+   screen order and naming, and it should not read like a decision. */
+.react-flow__edge.edge--assumed .react-flow__edge-path {
+  stroke-dasharray: 6 5;
+  stroke: #4d556a;
+}
+.react-flow__edge.edge--assumed .react-flow__edge-text {
+  fill: var(--ui-muted);
+  font-style: italic;
+}
+/* Both selectors are two classes deep, so the assumed styling above would win
+   on source order and a selected assumed edge — which is most of them — would
+   look exactly like an unselected one. You cannot delete what you cannot see
+   you have picked. */
+.react-flow__edge.edge--assumed.selected .react-flow__edge-path,
+.react-flow__edge.edge--assumed:hover .react-flow__edge-path {
+  stroke: var(--ui-accent);
+  stroke-dasharray: 6 5;
+}
+
+/* React Flow paints a white plate behind an edge label by default, which on a
+   dark canvas is a bright rectangle floating over the design. */
+.react-flow__edge-textbg {
+  fill: var(--ui-bg);
+}
+.react-flow__edge-text {
+  fill: var(--ui-muted);
+  font-size: 11px;
+}
+
+/* Notices: what went wrong, where someone will see it. Bottom centre, over
+   the canvas, click to dismiss. Not a modal — a refused drag is not worth
+   interrupting anyone for, it just has to be readable. */
+.notices {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.notice {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 560px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-line, #2a2f3d);
+  background: var(--ui-panel, #1a1d26);
+  color: var(--ui-text, #e6e8ee);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.notice--error {
+  border-color: #b4453f;
+}
+.notice__message {
+  font-weight: 600;
+}
+.notice__hint {
+  color: var(--ui-muted, #8b93a7);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Alt-drag to point at something. The layer only takes pointer events while
+   Alt is held — otherwise it would sit over the canvas and swallow every
+   scroll inside a screen. */
+.marquee-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  cursor: crosshair;
+}
+.marquee {
+  position: fixed;
+  border: 1px solid var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 14%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.toolbar__badge {
+  padding: 3px 8px;
+  border: 1px solid var(--ui-line, #2a2f3d);
+  border-radius: 999px;
+  color: var(--ui-muted, #8b93a7);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

@@ -1,0 +1,27 @@
+The Flowkit project format
+Copyright (c) 2026 Alex Martynov
+
+The SPECIFICATION of the Flowkit project document — the shape of the JSON, the
+names of its fields, the composer's `<x-name>`, `<x-slot>` and `<x-fill>`, and
+the tier rules that govern what may contain what — is published under the terms
+below, separately from the implementation.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this specification, to deal in it without restriction, including without
+limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense and/or sell copies of it, and to permit persons to whom it is
+furnished to do so, subject to the following condition:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the specification.
+
+THE SPECIFICATION IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED.
+
+WHY THIS IS SEPARATE
+
+A format nobody may implement is not a format, it is a file layout. Flowkit
+itself is AGPL-3.0 (see LICENSE) because it is a program and we want changes to
+it to come back. A design somebody has written down is not our program: they
+must be able to read it, convert it, and write a different tool that opens it,
+without asking anybody and without inheriting our licence.
