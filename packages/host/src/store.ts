@@ -72,7 +72,7 @@ export class Store {
 
   /** Modification time of the last content this store read or wrote. Anything
    *  else means another writer got there first. */
-  private seen = 0;
+  private seen = '';
 
   private constructor(doc: ProjectDoc, options: StoreOptions) {
     this.doc = doc;
@@ -84,7 +84,7 @@ export class Store {
   static async open(options: StoreOptions): Promise<Store> {
     if (!(await exists(options.path))) throw new Error(`No project at ${options.path}`);
     const store = new Store(await readJson<ProjectDoc>(options.path), options);
-    store.seen = await mtime(options.path);
+    store.seen = await signature(options.path);
     // Only kept if it still describes the document actually on disk; a log
     // whose inverses were computed against something else would undo values
     // that never existed.
@@ -201,7 +201,7 @@ export class Store {
     await writeFile(temp, JSON.stringify(next), 'utf8');
     await replace(temp, this.path);
     this.doc = next;
-    this.seen = await mtime(this.path);
+    this.seen = await signature(this.path);
   }
 
   /** Pick up another writer's change before applying our own.
@@ -210,8 +210,8 @@ export class Store {
    *  computed against a stale copy would undo the wrong thing — so this runs
    *  before every write rather than on a timer. */
   private async refresh(): Promise<void> {
-    const now = await mtime(this.path);
-    if (now === this.seen || now === 0) return;
+    const now = await signature(this.path);
+    if (now === this.seen || now === '') return;
     this.doc = await readJson<ProjectDoc>(this.path);
     this.seen = now;
   }
@@ -224,13 +224,21 @@ export class Store {
   }
 }
 
-/** 0 when the file is missing — treated as "nothing to pick up" rather than as
- *  a change, so a store keeps working on a project whose file was removed
- *  instead of throwing on the next command. */
-async function mtime(path: string): Promise<number> {
+/** A cheap fingerprint of the file's current content: modification time AND
+ *  size. Mtime alone is not enough — Bun reports it at millisecond resolution,
+ *  so two writes within the same millisecond (a fixture write then an immediate
+ *  edit, routine on a fast CI disk) carry an identical mtime and the second
+ *  writer never notices the first. Size moves whenever the document's length
+ *  does, which any real edit changes, so the pair catches what mtime misses.
+ *
+ *  Empty string when the file is missing — treated as "nothing to pick up"
+ *  rather than as a change, so a store keeps working on a project whose file
+ *  was removed instead of throwing on the next command. */
+async function signature(path: string): Promise<string> {
   try {
-    return (await stat(path)).mtimeMs;
+    const s = await stat(path);
+    return `${s.mtimeMs}:${s.size}`;
   } catch {
-    return 0;
+    return '';
   }
 }

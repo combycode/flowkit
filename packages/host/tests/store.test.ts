@@ -3,7 +3,7 @@
  * These exercise it against a real file. */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, stat, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ProjectDoc } from '@flowkit/core';
@@ -190,6 +190,23 @@ describe('two writers on one file', () => {
     // Forces the refresh: the in-memory copy still says 'Test'.
     await mcp.run({ t: 'node.update', id: 'n1', patch: { order: 2 } });
 
+    expect(mcp.get().name).toBe('Renamed by the studio');
+  });
+
+  /* The change detection must not lean on mtime alone. Bun reports mtime at
+     millisecond resolution, so a fixture write and an immediate edit can share
+     one — routine on a fast CI disk, and it silently defeated the refresh. Pin
+     the mtime back to what it was and the store must STILL notice, by size. */
+  test('a same-millisecond change is still picked up, by size', async () => {
+    const mcp = await Store.open({ path });
+    const before = await stat(path);
+
+    const studio = await Store.open({ path });
+    await studio.run({ t: 'project.rename', name: 'Renamed by the studio' });
+    // As a write inside the same millisecond would leave it: mtime unmoved.
+    await utimes(path, before.atime, before.mtime);
+
+    await mcp.run({ t: 'node.update', id: 'n1', patch: { order: 2 } });
     expect(mcp.get().name).toBe('Renamed by the studio');
   });
 
