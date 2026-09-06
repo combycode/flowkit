@@ -57,6 +57,28 @@ function table(rows: string[][]): void {
   }
 }
 
+/** The package version, from whichever package.json sits with the code: beside
+ *  flowkit.js in the published bundle, or a level up from src/ in the source
+ *  tree. (The published layout is `@combycode/flowkit/{flowkit.js,package.json}`
+ *  — reading `..` there lands on the empty scope directory, which is the bug a
+ *  bun-link test hid because `..` happened to reach the source manifest.) */
+async function version(): Promise<string> {
+  const { readFile } = await import('node:fs/promises');
+  const candidates = [
+    resolve(import.meta.dirname, 'package.json'), // published: beside flowkit.js
+    resolve(import.meta.dirname, '..', 'package.json'), // dev: src/ → package root
+  ];
+  for (const p of candidates) {
+    try {
+      const pkg = JSON.parse(await readFile(p, 'utf8')) as { version?: string };
+      if (pkg.version) return pkg.version;
+    } catch {
+      // try the next location
+    }
+  }
+  return 'unknown';
+}
+
 /** The one-shot verbs — everything that runs, prints, and exits. The
  *  long-running server commands are handled separately so they never exit. */
 async function run(): Promise<number> {
@@ -68,14 +90,9 @@ async function run(): Promise<number> {
       return 0;
 
     case '--version':
-    case '-v': {
-      const { readFile } = await import('node:fs/promises');
-      const pkg = JSON.parse(
-        await readFile(resolve(import.meta.dirname, '..', 'package.json'), 'utf8'),
-      ) as { version: string };
-      console.log(pkg.version);
+    case '-v':
+      console.log(await version());
       return 0;
-    }
 
     case 'init':
       // Wire up a repo for a client. Defaults to Claude Code's .mcp.json.
@@ -250,16 +267,14 @@ async function exportProject(): Promise<number> {
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
   const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
   const client = new Client({ name: 'flowkit-cli', version: '0' });
+  // Re-run THIS binary in mcp mode (no canvas) — `flowkit.js` in the published
+  // package, `cli.ts` in the source tree. Spawning a fixed `main.ts` broke on a
+  // real install, where only the bundle exists.
+  const self = process.argv[1] ?? resolve(import.meta.dirname, 'flowkit.js');
   await client.connect(
     new StdioClientTransport({
       command: 'bun',
-      args: [
-        'run',
-        resolve(import.meta.dirname, 'main.ts'),
-        '--workspace',
-        workspaceDir(flag('workspace')),
-        '--no-studio',
-      ],
+      args: [self, 'mcp', '--workspace', workspaceDir(flag('workspace'))],
     }),
   );
   try {

@@ -6,6 +6,19 @@ aims at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] — install fixes
+
+### Fixed
+
+- `flowkit --version` crashed on a real install (`ENOENT … @combycode/package.json`).
+  The bin read its `package.json` one directory up — correct only in a `bun link`
+  layout, not in `node_modules/@combycode/flowkit/`, where the manifest sits beside
+  the bundle. It now reads whichever `package.json` is with the code.
+- `flowkit export` spawned a `main.ts` that exists only in the source tree; on a
+  real install it now re-runs the installed binary itself in `mcp` mode.
+- The release workflow now smoke-runs the built CLI's `--version`, so a bundle
+  path bug fails CI instead of shipping.
+
 ## [0.1.0] — first release
 
 The design lives as one JSON document in your repo and is edited only through
@@ -41,5 +54,6 @@ design exports to a single self-contained HTML file.
 - **Text and translation.** Every visible string carries a key; generated kit
   pages are never offered for translation.
 
-[Unreleased]: https://github.com/combycode/flowkit/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/combycode/flowkit/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/combycode/flowkit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/combycode/flowkit/releases/tag/v0.1.0

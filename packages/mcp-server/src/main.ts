@@ -111,7 +111,7 @@ async function main() {
 
   const server = new McpServer(
     // Keep in step with packages/mcp-server/package.json — the published version.
-    { name: 'flowkit', version: '0.1.0' },
+    { name: 'flowkit', version: '0.1.1' },
     { instructions: INSTRUCTIONS },
   );
   const registrar = server as unknown as Registrar;

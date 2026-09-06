@@ -39,6 +39,18 @@ jobs:
       - run: bun test
       - run: bun run build
 
+      # Smoke the BUILT bundle the way an installed user runs it — this catches
+      # path bugs the unit tests cannot see (the bin reads its own package.json,
+      # spawns itself), which is how a broken `--version` once shipped.
+      - name: Smoke — the built CLI reports its version
+        shell: bash
+        run: |
+          v=$(bun packages/mcp-server/dist/flowkit.js --version)
+          echo "flowkit --version → $v"
+          [ "$v" = "$(jq -r .version packages/mcp-server/dist/package.json)" ] || {
+            echo "::error::built CLI did not report the manifest version"; exit 1;
+          }
+
       - name: Publish (idempotent; dry-run on workflow_dispatch)
         shell: bash
         working-directory: packages/mcp-server/dist

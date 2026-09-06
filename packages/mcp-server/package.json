@@ -1,6 +1,6 @@
 {
   "name": "@combycode/flowkit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A design system and screen flow an agent can work on. One JSON document, edited only through tools.",
   "type": "module",
   "license": "AGPL-3.0-only",
