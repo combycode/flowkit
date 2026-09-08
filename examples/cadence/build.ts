@@ -89,6 +89,7 @@ async function elements(): Promise<void> {
   color: var(--accent-text);
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 .button--quiet {
   background: transparent;
@@ -357,6 +358,11 @@ async function components(): Promise<void> {
   width: 3px;
   border-radius: var(--radius-pill);
   background: var(--accent);
+}
+@media (max-width: 640px) {
+  .nav-item { flex-direction: column; gap: 2px; padding: var(--space-2); font-size: var(--text-xs); align-items: center; justify-content: center; flex: 1; }
+  .nav-item--active { background: transparent; }
+  .nav-item__bar { display: none; }
 }`,
   });
 
@@ -577,7 +583,12 @@ async function containers(): Promise<void> {
 .sidebar__nav { display: flex; flex-direction: column; gap: var(--space-1); }
 .sidebar__foot { margin-top: auto; }
 .sidebar--mini { width: 64px; align-items: center; }
-.sidebar--mini .sidebar__name { display: none; }`,
+.sidebar--mini .sidebar__name { display: none; }
+@media (max-width: 640px) {
+  .sidebar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; flex-direction: row; width: auto; gap: 0; padding: var(--space-1) var(--space-2); border-right: none; border-top: var(--border-width) solid var(--border); }
+  .sidebar__brand, .sidebar__foot { display: none; }
+  .sidebar__nav { flex-direction: row; flex: 1; gap: var(--space-1); justify-content: space-around; }
+}`,
   });
 
   // The top bar of the app.
@@ -603,7 +614,12 @@ async function containers(): Promise<void> {
   background: var(--surface);
 }
 .topbar__title { font-size: var(--text-lg); font-weight: 600; }
-.topbar__actions { display: flex; align-items: center; gap: var(--space-3); }`,
+.topbar__actions { display: flex; align-items: center; gap: var(--space-3); }
+@media (max-width: 640px) {
+  .topbar { padding: var(--space-3) var(--space-4); gap: var(--space-3); }
+  .topbar__title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar__actions { gap: var(--space-2); flex: none; }
+}`,
   });
 
   // A kanban column.
@@ -696,7 +712,11 @@ async function layouts(): Promise<void> {
     name: 'app-shell',
     css: `.app { display: flex; min-height: 100vh; background: var(--bg); color: var(--text); }
 .app__main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.app__content { flex: 1; padding: var(--space-6) var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }`,
+.app__content { flex: 1; padding: var(--space-6) var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }
+@media (max-width: 640px) {
+  .app { flex-direction: column; }
+  .app__content { padding: var(--space-4); padding-bottom: 76px; gap: var(--space-4); }
+}`,
   });
 
   await call('create_item', {
@@ -717,12 +737,17 @@ async function layouts(): Promise<void> {
   await call('set_item_css', {
     name: 'marketing-shell',
     css: `.marketing { min-height: 100vh; background: var(--bg); color: var(--text); }
-.mkt-nav { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-6); border-bottom: var(--border-width) solid var(--border); }
+.mkt-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-6); border-bottom: var(--border-width) solid var(--border); }
 .mkt-nav__brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; }
 .mkt-nav__brand .icon { color: var(--accent); }
 .mkt-nav__links { display: flex; align-items: center; gap: var(--space-4); }
 .mkt-main { max-width: 1080px; margin: 0 auto; padding: var(--space-7) var(--space-6); display: flex; flex-direction: column; gap: var(--space-7); }
-.mkt-foot { padding: var(--space-6); border-top: var(--border-width) solid var(--border); color: var(--text-muted); text-align: center; }`,
+.mkt-foot { padding: var(--space-6); border-top: var(--border-width) solid var(--border); color: var(--text-muted); text-align: center; }
+@media (max-width: 640px) {
+  .mkt-nav { padding: var(--space-3) var(--space-4); gap: var(--space-2); }
+  .mkt-nav__links { gap: var(--space-3); }
+  .mkt-main { padding: var(--space-6) var(--space-4); gap: var(--space-6); }
+}`,
   });
 
   await call('create_item', {
@@ -771,12 +796,43 @@ async function pagesSheet(): Promise<void> {
 .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
 .tiers { display: grid; grid-template-columns: repeat(2, minmax(0, 320px)); gap: var(--space-5); }
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
-.board { display: flex; gap: var(--space-4); align-items: flex-start; overflow-x: auto; }
+.board { display: flex; gap: var(--space-4); align-items: stretch; overflow-x: auto; flex: 1; min-height: 0; }
 .table { display: flex; flex-direction: column; border: var(--border-width) solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
 .table__head { display: grid; grid-template-columns: 1fr auto auto 7rem; gap: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface-2); color: var(--text-muted); font-size: var(--text-sm); }
 .detail { display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-5); align-items: start; }
 .panel { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: var(--border-width) solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
-.section-title { font-size: var(--text-lg); font-weight: 600; }`,
+.section-title { font-size: var(--text-lg); font-weight: 600; }
+@media (max-width: 640px) {
+  .features { grid-template-columns: 1fr; }
+  .tiers { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail { grid-template-columns: 1fr; }
+  .hero__title, .hero__sub { max-width: none; }
+}`,
+  });
+
+  // The base stylesheet: the default reset PLUS a themed window scrollbar, so
+  // every screen replaces the OS default scrollbar with a thin, on-brand one.
+  await call('set_base', {
+    css: `*,
+*::before,
+*::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: var(--text-md); line-height: var(--leading-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p, figure { margin: 0; }
+h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); letter-spacing: -0.01em; }
+h2 { font-size: var(--text-xl); line-height: var(--leading-tight); }
+a { color: var(--accent); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Themed window scrollbar — replaces the OS default on every screen. */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-pill); border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-corner { background: transparent; }`,
   });
 }
 
