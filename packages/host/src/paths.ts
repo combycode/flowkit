@@ -36,7 +36,11 @@ function underHome(app: string): string {
       // onto another machine on a domain profile.
       return join(process.env.APPDATA ?? join(home, 'AppData', 'Roaming'), app);
     case 'darwin':
-      return join(home, 'Library', 'Application Support', app);
+      // XDG_DATA_HOME wins when set — some macOS setups follow the XDG
+      // convention, and it is how a test redirects the data dir on every OS
+      // (the platform default here reads no env var, so without this the tests
+      // wrote to the real ~/Library and polluted each other on macOS CI).
+      return join(process.env.XDG_DATA_HOME ?? join(home, 'Library', 'Application Support'), app);
     default:
       return join(process.env.XDG_DATA_HOME ?? join(home, '.local', 'share'), app.toLowerCase());
   }

@@ -17,6 +17,9 @@ aims at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `~/.cache/ms-playwright`) are searched too now, and the system-browser list
   gained macOS Edge/Chromium and the common Linux binaries. `FLOWKIT_CHROME`
   still overrides everything.
+- `appDataDir()` honours `XDG_DATA_HOME` on macOS too (the platform default
+  read no environment variable, so nothing could redirect the data directory
+  there — which is also why the tests polluted each other on macOS CI).
 
 ### Changed
 
