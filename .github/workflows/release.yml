@@ -36,7 +36,7 @@ jobs:
       - run: bun install
       - run: bun run lint
       - run: bun run typecheck
-      - run: bun test
+      - run: bun run test
       - run: bun run build
 
       # Smoke the BUILT bundle the way an installed user runs it — this catches

@@ -13,7 +13,7 @@
     "mcp": "bun run packages/mcp-server/src/main.ts",
     "mcp:call": "bun run tools/mcp-call.ts",
     "dev": "bun run build:viewer && bun run packages/host/src/server/main.ts",
-    "test": "bun test packages apps",
+    "test": "bun test --timeout 30000 packages apps",
     "audit": "bun run tools/audit.ts",
     "check": "bun run audit && bun run lint && bun run typecheck && bun run test",
     "build": "bun run tools/build-package.ts",

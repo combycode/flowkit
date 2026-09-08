@@ -43,4 +43,6 @@ jobs:
       - run: bun install
       - run: bun run lint
       - run: bun run typecheck
-      - run: bun test
+      # `bun run test` carries a generous per-test timeout — a cold headless
+      # browser's first render can take many seconds on a fresh CI runner.
+      - run: bun run test
