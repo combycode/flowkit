@@ -1,0 +1,46 @@
+name: CI
+
+# The gate on every push and PR, across the OSes people install on. The test
+# suite renders real screens through a headless system browser, so this also
+# exercises the Chromium sidecar on macOS — where the browser lives in a very
+# different place than on Linux.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: "1.3.14"
+
+jobs:
+  gate:
+    name: gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      # render_screen / export_png drive a real headless browser over CDP.
+      # Ubuntu runners ship Google Chrome; make sure macOS has one too so the
+      # render tests can actually run (and prove the sidecar finds it there).
+      - name: Ensure a headless browser (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          if [ ! -d "/Applications/Google Chrome.app" ]; then
+            brew install --cask google-chrome
+          fi
+          echo "Chrome: $(ls -d '/Applications/Google Chrome.app' 2>/dev/null || echo 'not found')"
+
+      - run: bun install
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test

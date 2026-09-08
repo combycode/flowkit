@@ -6,6 +6,21 @@ aims at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The Chromium sidecar now finds a browser on macOS and Linux, not just Windows.
+  The Playwright browser-cache lookup was keyed off `LOCALAPPDATA` — a
+  Windows-only variable — so a downloaded Chromium was invisible off Windows.
+  The per-OS cache directories (`~/Library/Caches/ms-playwright`,
+  `~/.cache/ms-playwright`) are searched too now, and the system-browser list
+  gained macOS Edge/Chromium and the common Linux binaries. `FLOWKIT_CHROME`
+  still overrides everything.
+
+### Changed
+
+- CI runs the full gate on macOS as well as Linux (`.github/workflows/ci.yml`),
+  so cross-platform regressions — browser discovery included — fail before a release.
+
 ## [0.1.2] — tool annotations, canvas and selection fixes, GUI-ready configs
 
 ### Added

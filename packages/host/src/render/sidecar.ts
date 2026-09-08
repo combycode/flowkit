@@ -17,6 +17,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { exists, sleep } from '../fsx';
 import { Cdp, evaluate } from './cdp';
 import { activePort, profileDir, sweep } from './port';
@@ -98,18 +99,30 @@ export interface RenderResult {
 
 /** Where Chromium might be. Overridable, because a hardcoded path is the
  *  first thing to break on another machine. */
-function candidates(): string[] {
+export function candidates(): string[] {
   const fromEnv = process.env.FLOWKIT_CHROME ?? process.env.DESIGN_FLOW_CHROME;
-  const local = process.env.LOCALAPPDATA ?? '';
+  const home = homedir();
+  const winCache = process.env.LOCALAPPDATA;
   return [
     ...(fromEnv ? [fromEnv] : []),
-    // Playwright's cache holds several builds; the newest is picked below.
-    ...(local ? [`${local}/ms-playwright`] : []),
+    // Playwright's browser cache — a DIFFERENT directory on each OS. Keying it
+    // off LOCALAPPDATA alone (a Windows-only variable) left macOS and Linux
+    // blind to a downloaded Chromium. Each path ends in "ms-playwright", so
+    // findChrome scans it for the newest build below.
+    ...(winCache ? [`${winCache}/ms-playwright`] : []), // Windows
+    `${home}/Library/Caches/ms-playwright`, // macOS
+    `${home}/.cache/ms-playwright`, // Linux
+    // A system browser, by platform.
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
     'C:/Program Files/Google/Chrome/Application/chrome.exe',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
   ];
 }
 
@@ -127,7 +140,7 @@ async function findChrome(): Promise<string> {
   );
 }
 
-async function newestPlaywrightChromium(root: string): Promise<string | undefined> {
+export async function newestPlaywrightChromium(root: string): Promise<string | undefined> {
   const { readdir } = await import('node:fs/promises');
   let builds: string[];
   try {
